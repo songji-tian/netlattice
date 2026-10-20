@@ -60,6 +60,26 @@ python3 scripts/validate_topology.py topology.yaml
 
 Do not continue if validation fails. Fix the topology or ask the user; do not “make it fit” by editing module code.
 
+### Optional: inspect with the reference console
+
+If the user wants a visual check before apply, run the read-only console:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r console/requirements.txt
+NETLATTICE_TOPOLOGY=topology.yaml \
+  .venv/bin/uvicorn console.app:app --host 127.0.0.1 --port 8787
+```
+
+Then verify:
+
+```bash
+curl -fsS http://127.0.0.1:8787/api/health
+curl -fsS http://127.0.0.1:8787/api/render
+```
+
+The console never applies changes. It is a projection for humans and a stable preview API for agents; deployment still follows the phases below.
+
 ---
 
 ## 3. Non-negotiables

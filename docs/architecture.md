@@ -17,11 +17,14 @@ Control plane                     Data plane
 topology.yaml                     AdGuard Home   :53, :3000
 AGENTS.md                         WireGuard      :51820/udp
 scripts/validate_topology.py      wg-easy        :51821
-.netlattice/plan.json             Proxmox VE     :8006
+console/ (read-only projection)    Proxmox VE     :8006
+.netlattice/plan.json
 .netlattice/state.json
 ```
 
-The control plane is deliberately small: a YAML file, a validation script, and an agent contract. The heavy lifting is done by the data-plane components.
+The control plane is deliberately small: a YAML file, a validation script, an agent contract, and a read-only console projection. The heavy lifting is done by the data-plane components.
+
+The v0.2 console reads the same `topology.yaml` and renders safe previews. It does not hold credentials, mutate state, or call infrastructure APIs; apply remains the deployment agent's job.
 
 ## Why one repository with three modules?
 

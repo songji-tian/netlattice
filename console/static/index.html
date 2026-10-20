@@ -1,0 +1,498 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NetLattice Console</title>
+  <style>
+    :root {
+      --bg: #f5f7f8;
+      --panel: #ffffff;
+      --text: #18212b;
+      --muted: #667085;
+      --line: #e3e8ee;
+      --accent: #0f766e;
+      --accent-soft: #e8f5f2;
+      --chip: #ecfdf3;
+      --chip-text: #087443;
+      --warn: #b45309;
+      --code-bg: #101923;
+      --code-text: #dce7f1;
+      --shadow: 0 10px 28px rgba(17, 31, 44, .06);
+    }
+    [data-theme="dark"] {
+      --bg: #0e141b;
+      --panel: #151e27;
+      --text: #e6edf4;
+      --muted: #94a3b8;
+      --line: #263442;
+      --accent: #5eead4;
+      --accent-soft: #143832;
+      --chip: #14352b;
+      --chip-text: #86efac;
+      --warn: #fbbf24;
+      --code-bg: #0a1017;
+      --code-text: #dbe7f3;
+      --shadow: 0 10px 28px rgba(0, 0, 0, .24);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "Noto Sans", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    button, select { font: inherit; }
+    .top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 22px 32px;
+      border-bottom: 1px solid var(--line);
+      background: color-mix(in srgb, var(--panel) 88%, transparent);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .logo {
+      width: 42px; height: 42px; border-radius: 13px;
+      display: grid; place-items: center;
+      background: var(--accent); color: #fff;
+      font-weight: 800; letter-spacing: -.04em;
+      box-shadow: var(--shadow);
+    }
+    .brand h1 { font-size: 18px; margin: 0; letter-spacing: -.02em; }
+    .brand p { margin: 1px 0 0; color: var(--muted); font-size: 12px; }
+    .actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+    .site { color: var(--muted); font-size: 13px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 12px;
+      color: var(--muted);
+      background: var(--panel);
+      white-space: nowrap;
+    }
+    .badge.ok { color: var(--chip-text); background: var(--chip); border-color: transparent; }
+    .badge.err { color: #b91c1c; background: #fef2f2; border-color: #fecaca; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    main { max-width: 1220px; margin: 0 auto; padding: 28px 24px 64px; }
+    .hero {
+      display: flex; align-items: flex-end; justify-content: space-between;
+      gap: 24px; padding: 30px 4px 24px;
+    }
+    .eyebrow { margin: 0 0 6px; color: var(--accent); font-size: 11px; font-weight: 800; letter-spacing: .16em; }
+    .hero h2 { margin: 0; font-size: clamp(30px, 5vw, 48px); letter-spacing: -.05em; line-height: 1; }
+    .muted { color: var(--muted); }
+    .hero .muted { margin: 10px 0 0; font-size: 13px; }
+    .counts { display: grid; grid-template-columns: repeat(4, minmax(82px, 1fr)); gap: 10px; }
+    .count {
+      border: 1px solid var(--line); background: var(--panel);
+      border-radius: 14px; padding: 12px 14px; min-width: 88px;
+      box-shadow: var(--shadow);
+    }
+    .count strong { display: block; font-size: 22px; letter-spacing: -.04em; }
+    .count span { color: var(--muted); font-size: 11px; }
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 10px 0 18px; }
+    .module-card {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+      padding: 18px; box-shadow: var(--shadow);
+    }
+    .module-card h3 { margin: 0 0 4px; text-transform: capitalize; }
+    .module-card p { margin: 0; color: var(--muted); font-size: 13px; }
+    .module-meta { display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+    .pill { border-radius: 999px; padding: 4px 8px; font-size: 11px; background: var(--accent-soft); color: var(--accent); }
+    .grid.two { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .panel {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
+      padding: 20px; margin-bottom: 18px; box-shadow: var(--shadow);
+    }
+    .panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+    .panel-head h3 { margin: 0; font-size: 16px; letter-spacing: -.02em; }
+    .panel-head .muted { font-size: 12px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--muted); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+    tr:last-child td { border-bottom: 0; }
+    code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    code { font-size: 12px; background: var(--accent-soft); color: var(--accent); padding: 2px 5px; border-radius: 5px; }
+    pre {
+      margin: 12px 0 0; padding: 16px; overflow: auto;
+      background: var(--code-bg); color: var(--code-text);
+      border-radius: 12px; font-size: 12px; line-height: 1.65;
+      max-height: 460px; white-space: pre-wrap; word-break: break-word;
+    }
+    details { margin-top: 12px; }
+    summary { cursor: pointer; color: var(--accent); font-size: 13px; font-weight: 600; }
+    .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    select {
+      background: var(--panel); color: var(--text); border: 1px solid var(--line);
+      border-radius: 9px; padding: 8px 10px; min-width: 220px;
+    }
+    button {
+      border: 1px solid var(--line); border-radius: 9px; padding: 8px 12px;
+      background: var(--panel); color: var(--text); cursor: pointer;
+    }
+    button:hover { border-color: var(--accent); color: var(--accent); }
+    button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+    button.primary:hover { filter: brightness(1.08); color: #fff; }
+    .table-action { padding: 4px 8px; font-size: 12px; }
+    .modal { position: fixed; inset: 0; background: rgba(7, 15, 24, .55); display: grid; place-items: center; padding: 24px; z-index: 50; }
+    .modal.hidden { display: none; }
+    .modal-card { width: min(920px, 100%); max-height: 88vh; overflow: auto; background: var(--panel); border-radius: 18px; padding: 20px; box-shadow: 0 24px 80px rgba(0,0,0,.3); }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .modal-head h3 { margin: 0; }
+    .footer { margin-top: 24px; color: var(--muted); font-size: 12px; text-align: center; }
+    @media (max-width: 900px) {
+      .cards, .grid.two { grid-template-columns: 1fr; }
+      .hero { align-items: flex-start; flex-direction: column; }
+      .counts { width: 100%; }
+    }
+    @media (max-width: 620px) {
+      .top { padding: 16px; align-items: flex-start; flex-direction: column; }
+      main { padding: 18px 14px 48px; }
+      .counts { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <div class="logo">NL</div>
+      <div>
+        <h1>NetLattice</h1>
+        <p>agent-first LAN/WAN fabric</p>
+      </div>
+    </div>
+    <div class="actions">
+      <span id="health" class="badge"><span class="dot"></span>loading</span>
+      <span id="site" class="site"></span>
+      <button id="theme" type="button" aria-label="Toggle theme">Dark</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <p class="eyebrow">SITE</p>
+        <h2 id="siteName">—</h2>
+        <p id="siteMeta" class="muted">Reading topology…</p>
+      </div>
+      <div id="counts" class="counts"></div>
+    </section>
+
+    <section id="modules" class="cards"></section>
+
+    <div class="grid two">
+      <section class="panel">
+        <div class="panel-head">
+          <h3>DNS</h3>
+          <span id="dnsBadge" class="badge">—</span>
+        </div>
+        <p id="dnsSummary" class="muted">—</p>
+        <table>
+          <thead><tr><th>Name</th><th>Type</th><th>Value</th></tr></thead>
+          <tbody id="dnsTable"></tbody>
+        </table>
+        <details>
+          <summary>AdGuard Home preview</summary>
+          <pre id="dnsPreview">—</pre>
+        </details>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h3>VPN</h3>
+          <span id="vpnBadge" class="badge">—</span>
+        </div>
+        <p id="vpnSummary" class="muted">—</p>
+        <table>
+          <thead><tr><th>Peer</th><th>Allowed IPs</th><th></th></tr></thead>
+          <tbody id="vpnTable"></tbody>
+        </table>
+        <details>
+          <summary>WireGuard server preview</summary>
+          <pre id="vpnPreview">—</pre>
+        </details>
+      </section>
+    </div>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h3>Compute</h3>
+        <span id="computeBadge" class="badge">—</span>
+      </div>
+      <p id="computeNote" class="muted">—</p>
+      <table>
+        <thead><tr><th>Template</th><th>VMID</th><th>OS</th><th>Cloud-init</th><th>Action</th></tr></thead>
+        <tbody id="computeTable"></tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h3>Render bundle</h3>
+        <span class="muted">generated previews · key placeholders only</span>
+      </div>
+      <div class="row">
+        <button id="loadBundle" class="primary" type="button">Load bundle</button>
+        <select id="bundleFiles" aria-label="Bundle files"></select>
+        <button id="download" type="button">Download</button>
+      </div>
+      <pre id="bundlePreview">Click “Load bundle” to render DNS, WireGuard, and compute previews.</pre>
+    </section>
+
+    <p class="footer">Read-only reference console · topology is the source of truth · no live infrastructure calls</p>
+  </main>
+
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h3 id="modalTitle">Preview</h3>
+        <button id="closeModal" type="button">Close</button>
+      </div>
+      <pre id="modalBody">—</pre>
+    </div>
+  </div>
+
+  <script>
+    const $ = (selector) => document.querySelector(selector);
+    const state = { bundle: null, bundleName: "" };
+
+    function text(value) {
+      return value === null || value === undefined || value === "" ? "—" : String(value);
+    }
+
+    function node(tag, className, content) {
+      const element = document.createElement(tag);
+      if (className) element.className = className;
+      if (content !== undefined) element.textContent = content;
+      return element;
+    }
+
+    function row(values) {
+      const tr = document.createElement("tr");
+      for (const value of values) {
+        const td = document.createElement("td");
+        if (value instanceof Node) td.appendChild(value);
+        else td.textContent = text(value);
+        tr.appendChild(td);
+      }
+      return tr;
+    }
+
+    function moduleBadge(module, id) {
+      const badge = node("span", `badge ${module?.enabled ? "ok" : ""}`, module?.enabled ? "configured" : "disabled");
+      if (id) badge.id = id;
+      if (module?.enabled) badge.prepend(node("span", "dot"));
+      return badge;
+    }
+
+    async function get(path) {
+      const response = await fetch(path, { headers: { Accept: "application/json" } });
+      const body = await response.json().catch(() => null);
+      if (!response.ok) {
+        const detail = body && body.detail ? JSON.stringify(body.detail) : `${response.status} ${response.statusText}`;
+        throw new Error(detail);
+      }
+      return body;
+    }
+
+    function renderCounts(counts) {
+      const labels = [
+        ["nodes", "Nodes"],
+        ["networks", "Networks"],
+        ["dnsRecords", "DNS records"],
+        ["vpnPeers", "VPN peers"],
+        ["computeTemplates", "Templates"],
+      ];
+      const target = $("#counts");
+      target.replaceChildren();
+      for (const [key, label] of labels) {
+        const card = node("div", "count");
+        card.append(node("strong", "", text(counts[key])), node("span", "", label));
+        target.appendChild(card);
+      }
+    }
+
+    function renderModules(modules) {
+      const target = $("#modules");
+      target.replaceChildren();
+      for (const [name, module] of Object.entries(modules || {})) {
+        const card = node("article", "module-card");
+        card.append(
+          node("h3", "", name),
+          node("p", "", module.summary || "—"),
+          node("div", "module-meta", "")
+        );
+        const meta = card.querySelector(".module-meta");
+        meta.append(moduleBadge(module), node("span", "pill", module.provider || "—"), node("span", "pill", module.mode || "—"));
+        target.appendChild(card);
+      }
+    }
+
+    function renderDns(data) {
+      $("#dnsBadge").replaceWith(moduleBadge(data.module, "dnsBadge"));
+      $("#dnsSummary").textContent = `Port ${data.admin_port} · upstream ${data.upstreams.join(", ") || "—"}`;
+      const tbody = $("#dnsTable");
+      tbody.replaceChildren();
+      for (const record of data.records || []) {
+        tbody.appendChild(row([record.name, record.type, record.value]));
+      }
+      if (!data.records?.length) tbody.appendChild(row(["No records", "", ""]));
+      $("#dnsPreview").textContent = data.preview || "—";
+    }
+
+    function renderVpn(data) {
+      $("#vpnBadge").replaceWith(moduleBadge(data.module, "vpnBadge"));
+      $("#vpnSummary").textContent = `${data.endpoint || "—"} · interface ${data.interface || "wg0"}`;
+      const tbody = $("#vpnTable");
+      tbody.replaceChildren();
+      for (const peer of data.peers || []) {
+        const button = node("button", "table-action", "Client config");
+        button.type = "button";
+        button.addEventListener("click", () => showPeer(peer.name));
+        tbody.appendChild(row([peer.name, (peer.allowed_ips || []).join(", "), button]));
+      }
+      if (!data.peers?.length) tbody.appendChild(row(["No peers", "", ""]));
+      $("#vpnPreview").textContent = data.server_preview || "—";
+    }
+
+    function renderCompute(data) {
+      $("#computeBadge").replaceWith(moduleBadge(data.module, "computeBadge"));
+      $("#computeNote").textContent = data.plan?.note || "—";
+      const tbody = $("#computeTable");
+      tbody.replaceChildren();
+      for (const template of data.plan?.templates || []) {
+        tbody.appendChild(row([
+          template.name,
+          template.vmid,
+          template.os,
+          template.cloud_init ? "yes" : "no",
+          template.action,
+        ]));
+      }
+      if (!data.plan?.templates?.length) tbody.appendChild(row(["No templates", "", "", "", ""]));
+    }
+
+    async function showPeer(name) {
+      $("#modalTitle").textContent = `WireGuard · ${name}`;
+      $("#modalBody").textContent = "Loading…";
+      $("#modal").classList.remove("hidden");
+      try {
+        const response = await fetch(`/api/vpn/peers/${encodeURIComponent(name)}/config`);
+        if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+        $("#modalBody").textContent = await response.text();
+      } catch (error) {
+        $("#modalBody").textContent = `Could not render peer config: ${error.message}`;
+      }
+    }
+
+    function closeModal() {
+      $("#modal").classList.add("hidden");
+    }
+
+    function showBundle() {
+      const select = $("#bundleFiles");
+      const name = select.value;
+      state.bundleName = name;
+      $("#bundlePreview").textContent = state.bundle?.[name] || "—";
+    }
+
+    async function loadBundle() {
+      $("#bundlePreview").textContent = "Rendering…";
+      try {
+        const bundle = await get("/api/render");
+        state.bundle = bundle;
+        const select = $("#bundleFiles");
+        select.replaceChildren();
+        for (const name of Object.keys(bundle).sort()) {
+          const option = document.createElement("option");
+          option.value = name;
+          option.textContent = name;
+          select.appendChild(option);
+        }
+        showBundle();
+      } catch (error) {
+        $("#bundlePreview").textContent = `Could not load bundle: ${error.message}`;
+      }
+    }
+
+    function downloadBundle() {
+      if (!state.bundle || !state.bundleName) {
+        $("#bundlePreview").textContent = "Load a bundle first.";
+        return;
+      }
+      const blob = new Blob([state.bundle[state.bundleName]], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = state.bundleName.split("/").pop();
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    async function loadAll() {
+      $("#health").className = "badge";
+      $("#health").textContent = "loading";
+      try {
+        const [health, site, dns, vpn, compute] = await Promise.all([
+          get("/api/health"),
+          get("/api/site"),
+          get("/api/dns"),
+          get("/api/vpn"),
+          get("/api/compute"),
+        ]);
+        $("#health").className = "badge ok";
+        $("#health").replaceChildren(node("span", "dot"), node("span", "", "read-only · " + health.version));
+        $("#site").textContent = health.topology;
+        $("#siteName").textContent = site.site || "—";
+        $("#siteMeta").textContent = `${site.apiVersion || "—"} · ${site.domains?.internal || "—"} · ${Object.keys(site.networks || {}).length} networks`;
+        renderCounts(site.counts || {});
+        renderModules(site.modules || {});
+        renderDns(dns);
+        renderVpn(vpn);
+        renderCompute(compute);
+      } catch (error) {
+        $("#health").className = "badge err";
+        $("#health").replaceChildren(node("span", "dot"), node("span", "", "error"));
+        $("#siteMeta").textContent = `Could not load topology: ${error.message}`;
+      }
+    }
+
+    function initTheme() {
+      const saved = localStorage.getItem("netlattice-theme") || "light";
+      document.documentElement.dataset.theme = saved;
+      $("#theme").textContent = saved === "dark" ? "Light" : "Dark";
+    }
+
+    $("#theme").addEventListener("click", () => {
+      const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      document.documentElement.dataset.theme = next;
+      localStorage.setItem("netlattice-theme", next);
+      $("#theme").textContent = next === "dark" ? "Light" : "Dark";
+    });
+    $("#closeModal").addEventListener("click", closeModal);
+    $("#modal").addEventListener("click", (event) => {
+      if (event.target === $("#modal")) closeModal();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeModal();
+    });
+    $("#loadBundle").addEventListener("click", loadBundle);
+    $("#bundleFiles").addEventListener("change", showBundle);
+    $("#download").addEventListener("click", downloadBundle);
+
+    initTheme();
+    loadAll();
+  </script>
+</body>
+</html>

@@ -32,6 +32,35 @@ Common errors:
 | 422 | schema validation |
 | 502 | upstream module failure |
 
+## v0.2 reference implementation
+
+The repository ships `console/`, a **read-only** implementation of the topology/render subset. It does not implement the write endpoints below yet.
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/health` | service and topology status |
+| GET | `/api/site` | site, nodes, networks, modules |
+| GET | `/api/topology` | validated topology document |
+| GET | `/api/modules` | module summaries |
+| GET | `/api/dns` | DNS records and AdGuard preview |
+| GET | `/api/vpn` | peers and WireGuard server preview |
+| GET | `/api/vpn/peers/{name}/config` | one peer config, private-key placeholder |
+| GET | `/api/compute` | templates and clone plan, read-only |
+| GET | `/api/plan` | compact resource plan |
+| GET | `/api/render` | all safe preview files |
+| GET | `/openapi.json` | generated OpenAPI 3 document |
+
+Start it with:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r console/requirements.txt
+NETLATTICE_TOPOLOGY=examples/home-lab.yaml \
+  .venv/bin/uvicorn console.app:app --host 127.0.0.1 --port 8787
+```
+
+The write contract below is the target for v0.3. Do not assume a write endpoint exists in v0.2.
+
 ## Topology
 
 ### `GET /api/topology`
