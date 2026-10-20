@@ -1,0 +1,82 @@
+apiVersion: netlattice/v1
+kind: Site
+metadata:
+  name: small-office
+spec:
+  domains:
+    internal: office.internal
+    public: example.com
+  networks:
+    lan:
+      cidr: 10.10.0.0/24
+      gateway: 10.10.0.1
+      dns: 10.10.0.2
+    vpn:
+      cidr: 10.88.0.0/24
+  nodes:
+    - name: edge-1
+      role: edge
+      address: 10.10.0.2
+    - name: pve-1
+      role: compute
+      address: 10.10.0.10
+    - name: pve-2
+      role: compute
+      address: 10.10.0.11
+  modules:
+    dns:
+      enabled: true
+      provider: adguard
+      admin_port: 3000
+      upstreams:
+        - 1.1.1.1
+        - 9.9.9.9
+      records:
+        - name: pve-1.office.internal
+          type: A
+          value: 10.10.0.10
+        - name: pve-2.office.internal
+          type: A
+          value: 10.10.0.11
+        - name: nas.office.internal
+          type: A
+          value: 10.10.0.20
+        - name: git.office.internal
+          type: CNAME
+          value: pve-1.office.internal
+    vpn:
+      enabled: true
+      provider: wireguard
+      endpoint: vpn.example.com:51820
+      interface: wg0
+      peers:
+        - name: admin-laptop
+          allowed_ips:
+            - 10.88.0.2/32
+        - name: dev-laptop
+          allowed_ips:
+            - 10.88.0.3/32
+        - name: phone
+          allowed_ips:
+            - 10.88.0.4/32
+    compute:
+      enabled: true
+      provider: proxmox
+      api_url: https://pve-1.office.internal:8006
+      defaults:
+        cores: 2
+        memory_mb: 2048
+        storage: local-lvm
+      templates:
+        - name: debian-12
+          vmid: 9001
+          os: linux
+          cloud_init: true
+        - name: ubuntu-24
+          vmid: 9003
+          os: linux
+          cloud_init: true
+        - name: windows-ltsc
+          vmid: 9002
+          os: windows
+          cloud_init: false
