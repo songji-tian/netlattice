@@ -79,6 +79,8 @@ Pass conditions:
 
 The reference console is a FastAPI service with a static frontend. It exposes the contract in [`docs/api/README.md`](../../docs/api/README.md#compute). The open-source extraction is tracked in the roadmap; until then, the API contract is the stable integration surface.
 
+The sanitized reference HTTP API is in [`API.md`](API.md): 13 operations covering health, login, VM list/detail, power actions, clone, delete, credentials, templates, overview, and audit logs. It is a contract reference, not yet the v0.1 server implementation.
+
 ## Security
 
 - Bind the console and PVE API to LAN/VPN only.
