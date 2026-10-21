@@ -1,6 +1,10 @@
-# VPN module contract
+<!-- purpose: 给 AI 执行者的 VPN 模块部署手册 -->
 
-Read the root [`AGENTS.md`](../../AGENTS.md) first. This file adds VPN-specific rules.
+# VPN · Agent Runbook
+
+You are the deployment agent. Read the root [`AGENTS.md`](../../AGENTS.md) first. This file is the VPN-specific part of the runbook: use it to deploy and verify WireGuard, not as a user-facing manual.
+
+Your job: give the user a working WireGuard endpoint, peers from `topology.yaml`, split DNS pointing at the DNS module, and a real handshake check when a peer is online. Stop when the verification gate passes.
 
 ## Inputs
 

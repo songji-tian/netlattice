@@ -1,6 +1,10 @@
-# Compute module contract
+<!-- purpose: 给 AI 执行者的 Compute 模块部署手册 -->
 
-Read the root [`AGENTS.md`](../../AGENTS.md) first. This file adds Proxmox-specific rules.
+# Compute · Agent Runbook
+
+You are the deployment agent. Read the root [`AGENTS.md`](../../AGENTS.md) first. This file is the Proxmox-specific part of the runbook: use it to create and verify VMs, not as a user-facing manual.
+
+Your job: clone a template into a working VM, inject the requested login method and network settings, start it, verify it, and delete the test VM without touching the template. Stop when the verification gate passes.
 
 ## Inputs
 

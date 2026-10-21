@@ -11,7 +11,7 @@ Base path:
 Authentication:
 
 - Browser: `sid` HttpOnly cookie, `SameSite=Lax`, 12h TTL.
-- Agent/CLI: `Authorization: Bearer <token>` (v0.2+).
+- Agent/CLI: `Authorization: Bearer <token>`.
 - Never put credentials in query strings.
 
 Common errors:
@@ -32,9 +32,9 @@ Common errors:
 | 422 | schema validation |
 | 502 | upstream module failure |
 
-## v0.2 reference implementation
+## Read-only reference console
 
-The repository ships `console/`, a **read-only** implementation of the topology/render subset. It does not implement the write endpoints below yet.
+The repository ships `console/`, a **read-only** implementation of the topology/render subset. It does not implement the write endpoints below.
 
 | Method | Path | Purpose |
 |---|---|---|
@@ -59,7 +59,7 @@ NETLATTICE_TOPOLOGY=examples/home-lab.yaml \
   .venv/bin/uvicorn console.app:app --host 127.0.0.1 --port 8787
 ```
 
-The write contract below is the target for v0.3. Do not assume a write endpoint exists in v0.2.
+The write endpoints below are the contract. The reference console does not implement them; verify the endpoint against the implementation you are running.
 
 ## Topology
 
@@ -205,6 +205,6 @@ Node, storage, and capacity summary.
 - All IDs are stable; names are not unique globally, so use IDs for writes.
 - All timestamps are Unix seconds.
 - All byte values are bytes, not GiB.
-- All list endpoints are paginated in v0.3+; v0.1 returns full lists.
+- List endpoints may return full lists; if an implementation paginates, it must be documented in its OpenAPI schema.
 - Secrets are write-only. A `GET` never returns a password, private key, or token.
 - Destructive calls require an explicit confirmation field.

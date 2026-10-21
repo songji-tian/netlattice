@@ -1,15 +1,13 @@
 <!-- purpose: Reference HTTP API for the compute module; sanitized from the private MVP. -->
 # Compute module HTTP API (reference)
 
-> **Status:** contract reference. The v0.1 repository does not ship this server implementation.
-> v0.2 will provide a clean-room implementation and add Bearer-token auth for agents.
+> **Status:** reference contract. The optional read-only console implements a subset; verify the endpoint you need against the implementation you are running.
 
 # netlattice-console · HTTP API
 
 > 面向开发者、脚本和 Agent 的接口手册。
 >
-> - 适用版本：`v0.2.0-dev` / 镜像 `netlattice-console:dev`
-> - 文档更新：2026-10-19
+> - 镜像：`netlattice-console:dev`
 > - 局域网域名：`https://console.example.com`
 > - 直连回退：`http://192.168.10.2:8787`（仅内网，建议优先 HTTPS）
 > - OpenAPI：`GET /openapi.json`（Swagger UI 未开启）

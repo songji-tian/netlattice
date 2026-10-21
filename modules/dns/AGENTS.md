@@ -1,6 +1,10 @@
-# DNS module contract
+<!-- purpose: 给 AI 执行者的 DNS 模块部署手册 -->
 
-Read the root [`AGENTS.md`](../../AGENTS.md) first. This file adds DNS-specific rules.
+# DNS · Agent Runbook
+
+You are the deployment agent. Read the root [`AGENTS.md`](../../AGENTS.md) first. This file is the DNS-specific part of the runbook: use it to deploy and verify AdGuard Home, not as a user-facing manual.
+
+Your job: make `spec.networks.lan.dns` answer internal names from `topology.yaml`, forward upstream, and keep the admin UI off the public internet. Stop when the verification gate passes.
 
 ## Inputs
 

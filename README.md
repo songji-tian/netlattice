@@ -1,180 +1,65 @@
-# NetLattice · 网织
+<!-- purpose: NetLattice 对外入口：一句话交给 AI，按 AGENTS.md 部署 DNS / VPN / Compute -->
 
-**Agent-first LAN/WAN fabric for DNS, WireGuard, and Proxmox.**
+# NetLattice
 
-NetLattice 是一套面向家庭实验室、小型办公室和企业内网的**网络拓扑管理方案**。它把三件常被分开维护的事，收敛到一份 `topology.yaml`：
+**把这个仓库交给你的 AI 编程工具（Claude Code、Codex 等），它会在你自己的机器上部署并验证一套内网基础设施。**
 
-- **DNS**：AdGuard Home 提供内网域名解析、上游分流、过滤与审计。
-- **VPN**：WireGuard 提供公网入口，把远程设备安全地接回内网。
-- **Compute**：Proxmox VE 提供虚拟机/模板/克隆能力，快速构建纯净测试与开发环境。
+对 AI 说这一句就够了：
 
-它不是一个传统意义上的“安装脚本集合”。它的第一等公民是 **给 Agent 读的部署契约**：
+> 请阅读 https://github.com/songji-tian/netlattice 里的 AGENTS.md，按它帮我部署。需要哪些信息就问我。
 
-> 看这个项目，并根据项目内容部署。
+## 你会得到
 
-Agent 读完 [`AGENTS.md`](AGENTS.md)，按 `topology.yaml` 生成计划、执行部署、逐项验证。人只负责提供缺失的密钥和做危险操作确认。
+- **DNS**：AdGuard Home 提供内网域名解析、上游分流、过滤和查询日志。
+- **VPN**：WireGuard 提供公网入口，把远程设备接回内网；可选 wg-easy 管理界面。
+- **Compute**：Proxmox VE 模板、完整克隆、cloud-init、开机/关机/删除和基础监控。
 
-## 为什么是 Agent-first
+三个模块可以只选一个，也可以组合。Agent 会读取同一份 `topology.yaml`，只部署你启用的模块。
 
-传统自托管项目的 README 假设读者是“有耐心的人”：读文档、改配置、逐条执行、遇到报错再搜索。
+## 选择模块
 
-NetLattice 假设读者是 **Agent**，同时让人仍然能审计：
-
-- `topology.yaml` 是唯一事实源，人和 Agent 看同一份意图。
-- `AGENTS.md` 是部署契约，定义输入、顺序、幂等、验证、回滚和禁止事项。
-- 每个模块有独立的 `AGENTS.md`，可以单独部署，也可以由总入口编排。
-- 所有操作必须 `plan → apply → verify`，不允许“先跑了再说”。
-- 密钥只从环境变量、文件或密钥管理器读取，**永不写入仓库、日志、计划文件**。
-
-## 三模块
-
-| 模块 | 解决什么 | 默认实现 | 管理界面 |
+| 模块 | 解决什么 | 什么时候启用 | Agent 手册 |
 |---|---|---|---|
-| [`modules/dns`](modules/dns/README.md) | 局域网 DNS 管理、内网域名、上游分流、过滤 | AdGuard Home | AdGuard Home 自带 |
-| [`modules/vpn`](modules/vpn/README.md) | 公网访问内网、远程开发、站点互联 | WireGuard + wg-easy | wg-easy 自带 |
-| [`modules/compute`](modules/compute/README.md) | 局域网机器虚拟化、模板、快速克隆 | Proxmox VE + API | `console/` 参考实现（只读） |
+| DNS | 内网域名、上游分流、过滤 | 家里或办公室需要 `pve.home.arpa` 这类内部名字 | [`modules/dns/AGENTS.md`](modules/dns/AGENTS.md) |
+| VPN | 公网访问内网、远程开发 | 人不在内网，或需要把多地网络连起来 | [`modules/vpn/AGENTS.md`](modules/vpn/AGENTS.md) |
+| Compute | 虚拟机模板、快速克隆、测试环境 | 有一台 Proxmox VE，想快速开干净机器 | [`modules/compute/AGENTS.md`](modules/compute/AGENTS.md) |
 
-三个模块可以独立使用；放在同一个仓库里，是因为它们共享同一张拓扑和同一套安全边界。后续可以把任一模块拆成独立仓库，`topology.yaml` 和 `AGENTS.md` 契约不变。
+只做 DNS 和 VPN 的家庭网络很常见；只有一台 PVE、不需要内网 DNS 的场景也很常见。按需启用，不必全装。
 
-## 架构
+## 你需要准备
 
-```text
-                         ┌─────────────────────────────┐
-                         │        topology.yaml        │
-                         │  sites / networks / nodes   │
-                         │  dns / vpn / compute        │
-                         └──────────────┬──────────────┘
-                                        │
-                         ┌──────────────▼──────────────┐
-                         │          AGENTS.md          │
-                         │  preflight → plan → apply   │
-                         │  → verify → report          │
-                         └──────────────┬──────────────┘
-                                        │
-          ┌─────────────────────────────┼─────────────────────────────┐
-          │                             │                             │
-┌─────────▼─────────┐         ┌─────────▼─────────┐         ┌─────────▼─────────┐
-│   DNS module      │         │   VPN module      │         │  Compute module   │
-│   AdGuard Home    │◄───────►│   WireGuard       │◄───────►│   Proxmox VE      │
-│   :53 / :3000     │  split  │   :51820/udp      │  reach  │   :8006 API       │
-└─────────┬─────────┘  DNS    └─────────┬─────────┘         └─────────┬─────────┘
-          │                             │                             │
-          └─────────────────────────────┴─────────────────────────────┘
-                                        │
-                              LAN / WAN / VPN overlay
-```
+1. **一台能 SSH 登录的 Linux 主机**（DNS/VPN 模块需要 Docker 和 Compose）。
+2. **一台 Proxmox VE**（仅 Compute 模块需要），以及一个权限受限的 API token。
+3. **一份拓扑文件**：复制 [`topology.example.yaml`](topology.example.yaml) 为 `topology.yaml`，按你的网络填写。
+4. **一个公网入口**（仅 VPN 需要）：公网 IP 或域名，以及可用的 `51820/udp`。
+5. **缺失的密钥**：AdGuard 管理员密码、wg-easy 管理员密码哈希、PVE API token。Agent 会在需要时向你索取。
+6. **一个能执行命令、编辑文件的 AI 编程工具**。
 
-## 快速开始（给 Agent）
+Agent 会自己跑预检、校验、部署和验证。你只需要提供它拿不到的信息，以及确认危险操作。
 
-```bash
-git clone https://github.com/songji-tian/netlattice.git
-cd netlattice
-cp examples/home-lab.yaml topology.yaml
-python3 scripts/validate_topology.py topology.yaml
-```
+## Agent 会怎么做
 
-然后把这句话交给 Agent：
+1. 读 `AGENTS.md` 和 `topology.yaml`。
+2. 确认启用了哪些模块，只询问缺失的密钥和访问方式。
+3. 预检端口、Docker、PVE API、磁盘和网络，不修改任何东西。
+4. 校验拓扑，给出将要创建/修改/删除的清单。
+5. 按 `dns → vpn → compute` 顺序部署。
+6. 逐项验证，交一份真实结果报告；失败就停下来修，不假装成功。
 
-> 读 `AGENTS.md`，按 `topology.yaml` 部署。缺的密钥问我，危险操作先确认。
+## 安全边界
 
-或者直接给项目地址：
+- 管理界面默认只绑定 `127.0.0.1` 或内网地址，不直接暴露公网。
+- 公网只放 WireGuard 的 `51820/udp`；PVE 的 `8006` 不应对公网开放。
+- 密钥只从环境变量、文件或密钥管理器读取，不写入 `topology.yaml`、日志或 Git。
+- 删除虚拟机、撤销 peer、覆盖配置等危险操作，Agent 必须先确认。
+- 仓库里的示例只使用 `home.arpa`、`example.com` 和文档网段，不含真实环境信息。
 
-> 看 https://github.com/songji-tian/netlattice ，并根据项目内容部署。
+## 这不是什么
 
-## 仓库结构
+- 不是一键安装 Proxmox VE 的脚本；Compute 模块假设 PVE 已经运行。
+- 不是公网 DNS 托管、TLS 证书签发或域名注册服务。
+- 不是把现有生产环境自动迁移过来的工具；它只管理 `topology.yaml` 里声明的资源。
 
-```text
-.
-├── AGENTS.md                 # 总部署契约（Agent 入口）
-├── PROMPT.md                 # 一句话部署提示词
-├── README.md
-├── SECURITY.md
-├── CONTRIBUTING.md
-├── LICENSE
-├── topology.example.yaml
-├── console/                  # v0.2 只读参考控制台
-│   ├── app.py
-│   ├── topology.py
-│   ├── render.py
-│   ├── static/index.html
-│   ├── Dockerfile
-│   └── compose.yaml
-├── tests/                    # console 单元/API 测试
-├── docs/
-│   ├── architecture.md
-│   ├── topology-schema.md
-│   ├── security.md
-│   └── api/
-│       └── README.md         # 统一 API 契约
-├── modules/
-│   ├── dns/
-│   ├── vpn/
-│   └── compute/
-├── examples/
-│   ├── home-lab.yaml
-│   └── small-office.yaml
-├── scripts/
-│   └── validate_topology.py
-└── .github/workflows/
-    └── validate.yml
-```
-
-## 参考 Console（v0.2）
-
-`console/` 是一个**只读**参考控制台：读 `topology.yaml`，展示拓扑、DNS 记录、VPN peer、Compute 模板，并生成安全预览。它不连接 AdGuard、WireGuard 或 Proxmox，不会修改任何基础设施。
-
-本地运行：
-
-```bash
-python3 -m venv .venv
-.venv/bin/pip install -r console/requirements.txt
-.venv/bin/uvicorn console.app:app --host 127.0.0.1 --port 8787
-```
-
-或容器运行：
-
-```bash
-docker compose -f console/compose.yaml up --build
-```
-
-打开 `http://127.0.0.1:8787`。默认读取 `topology.example.yaml`；切换拓扑：
-
-```bash
-NETLATTICE_TOPOLOGY=examples/home-lab.yaml \
-  .venv/bin/uvicorn console.app:app --host 127.0.0.1 --port 8787
-```
-
-主要接口：
-
-| 方法 | 路径 | 用途 |
-|---|---|---|
-| GET | `/api/health` | 服务与拓扑状态 |
-| GET | `/api/site` | 站点/节点/网络/模块总览 |
-| GET | `/api/dns` | DNS 记录与 AdGuard 预览 |
-| GET | `/api/vpn` | peer 列表与 WireGuard 服务端预览 |
-| GET | `/api/vpn/peers/{name}/config` | 单个 peer 客户端配置（私钥占位） |
-| GET | `/api/compute` | 模板与克隆计划（只读） |
-| GET | `/api/render` | 全部预览文件 |
-| GET | `/openapi.json` | OpenAPI 3 文档 |
-
-> 这是**契约参考实现**，不是 v0.3 的 apply 引擎。`render` 输出中的私钥字段是占位符，不能直接上线。
-
-## 当前状态
-
-- **v0.1**：Agent 契约、拓扑 schema、三模块边界、DNS/VPN 参考 compose、校验器、示例。
-- **v0.2（当前）**：只读参考 Console、DNS/WireGuard/Compute 安全预览、OpenAPI、单元/API 测试与容器。
-- **v0.3**：拓扑驱动的 apply 引擎：DNS 记录、WireGuard peer、PVE 克隆/开机；带 dry-run、幂等与回滚。
-- **v1.0**：一键 Agent 部署、端到端验证、升级与回滚。
-
-## 安全
-
-NetLattice 默认假设管理面**不暴露在公网**：
-
-- AdGuard 管理端口、PVE API、wg-easy 管理端口只绑定 LAN 或 VPN。
-- 公网只放 WireGuard UDP 端口（以及必要的 HTTPS 入口）。
-- 所有密钥通过 `.env.local`、Docker secrets、systemd credentials 或外部密钥管理器注入；仓库只保留 `.env.example`。
-- 公开部署前请阅读 [`SECURITY.md`](SECURITY.md) 和 [`docs/security.md`](docs/security.md)。
-
-## License
+## 许可
 
 Apache-2.0。见 [`LICENSE`](LICENSE)。

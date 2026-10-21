@@ -24,7 +24,7 @@ console/ (read-only projection)    Proxmox VE     :8006
 
 The control plane is deliberately small: a YAML file, a validation script, an agent contract, and a read-only console projection. The heavy lifting is done by the data-plane components.
 
-The v0.2 console reads the same `topology.yaml` and renders safe previews. It does not hold credentials, mutate state, or call infrastructure APIs; apply remains the deployment agent's job.
+The optional console reads the same `topology.yaml` and renders safe previews. It does not hold credentials, mutate state, or call infrastructure APIs; apply remains the deployment agent's job.
 
 ## Why one repository with three modules?
 
