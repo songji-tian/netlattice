@@ -49,8 +49,9 @@ From the environment:
 ## Verification gate
 
 ```bash
-wg show
-wg show <iface> latest-handshakes
+# wg-easy uses a bridged network; the host cannot see the interface.
+docker exec netlattice-wg-easy wg show
+docker exec netlattice-wg-easy wg show <iface> latest-handshakes
 ```
 
 Pass conditions:

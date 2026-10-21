@@ -47,6 +47,30 @@ Do **not** ask the user to run deployment commands. You run them. The user only 
 
 If the user said only “看这个项目并部署”, assume every module present in the topology is enabled, and ask only for missing access/secrets.
 
+### Scenario triage
+
+Before touching a host, classify the network entry. This determines whether direct inbound VPN is possible at all.
+
+| Situation | Deployment shape | Confirm before planning |
+|---|---|---|
+| Public IPv4 on the router WAN (dynamic is fine) | DNS/VPN on a LAN host; forward `51820/udp`; DDNS points `WG_HOST` at the router | WAN address is not `100.64.0.0/10` or RFC1918; no upstream NAT |
+| Public IPv6 only | WireGuard over IPv6, only if Docker publishes IPv6 and the firewall allows it | Both networks have IPv6; AAAA DDNS; verify the published UDP port listens on IPv6; otherwise treat IPv6-only as unsupported |
+| Bridged modem, router does PPPoE | Same as public IPv4; the router owns the address | Port forward target is the server; firewall allows UDP 51820 |
+| Bridged modem, server does PPPoE | The server owns the public address and becomes the LAN gateway | Second NIC or explicit LAN NAT/DHCP plan; a single-NIC server will cut off the existing LAN uplink — warn that this is advanced |
+| Modem still routing, plus another router | Double NAT | Prefer bridge; otherwise forward/DMZ on both layers |
+| CGNAT or no public IPv4 | Try public IPv6 only if Docker/firewall supports it; otherwise use a public relay/VPS | Do not promise direct inbound VPN; propose IPv6 only after verifying it, otherwise a relay, or stop |
+| One idle Linux host, no PVE | DNS + VPN only | Docker, SSH, static LAN address, port 53 free |
+| One PVE host | DNS/VPN in a small VM/LXC; compute manages other VMs | PVE API token, template, storage, bridge |
+
+Classify without guessing:
+
+- On the server, get the egress address: `curl -4 -fsS https://ifconfig.me`.
+- Read the router's WAN address. If the router WAN is `100.64.0.0/10` or RFC1918, treat it as CGNAT/double NAT and do not plan direct inbound VPN.
+- If the router WAN is public and matches the server's egress address, the public path is plausible. If they differ, investigate before promising anything.
+- Do not scan the public address or change router/firewall rules without permission. If the user cannot access the router, mark port forwarding and external reachability `USER-VERIFY`.
+
+If the user does not know which case they are in, ask one question: “光猫是桥接还是拨号？路由器 WAN 口拿到的是公网 IP 吗？” Then proceed with the matching row. Do not ask for a network diagram.
+
 ---
 
 ## 2. Read order
@@ -84,9 +108,21 @@ Check, for the enabled modules:
 
 | Module | Check |
 |---|---|
+| All | `command -v docker curl dig`; `docker compose version` — missing tools must be installed or reported; do not skip DNS verification |
 | DNS | `53/tcp`, `53/udp`, `3000/tcp`; who owns them |
 | VPN | `51820/udp`, `51821/tcp`; whether the host can enable `NET_ADMIN` |
 | Compute | `https://<pve>:8006/api2/json/version` with the token; template VMIDs exist; storage has room for a full clone |
+
+For VPN, also record the network entry facts (no secrets):
+
+| Check | Evidence | Stop condition |
+|---|---|---|
+| WAN type | router WAN address + `curl -4 -fsS https://ifconfig.me` on the server | WAN is `100.64.0.0/10` or RFC1918 → direct inbound VPN over IPv4 is impossible; try IPv6, otherwise propose a relay or stop |
+| DDNS | `dig +short A <WG_HOST>`; `dig +short AAAA <WG_HOST>` | neither resolves, or the record used by the endpoint is a private address |
+| Port forward | user confirms `51820/udp` → VPN host | cannot confirm → mark `USER-VERIFY`; do not claim `PASS` |
+| PPPoE owner | router or server | server does PPPoE without a LAN NAT/DHCP plan → stop and ask |
+| LAN address | `ip -4 addr show`; `ip route` | no stable address, or DNS host unreachable from LAN |
+| IPv6 (if used) | `curl -6 -fsS https://ifconfig.me` on the server; ask the user to check the client network | server lacks IPv6, or the client network has none → do not plan an IPv6-only endpoint |
 
 Write `STATE_DIR/preflight.json` without secrets. Default `STATE_DIR=.netlattice/`.
 
@@ -152,6 +188,8 @@ curl -fsS http://127.0.0.1:3000/ >/dev/null
 
 Then apply upstreams and rewrites from `topology.yaml` through the AdGuard API or UI. Ask the user for the admin password; do not generate and hide it.
 
+If the router's DHCP server hands out another DNS address, the service will pass `dig @<dns-ip>` but LAN clients will still miss internal names. Tell the user to change the DHCP DNS; do not change router settings without permission.
+
 ### VPN
 
 Read `modules/vpn/AGENTS.md` first.
@@ -183,9 +221,11 @@ Run every enabled gate. Report the actual command output, not a summary you inve
 |---|---|---|
 | DNS service | `dig @<dns-ip> <internal-name> +short` | expected A/AAAA/CNAME answer |
 | DNS upstream | `dig @<dns-ip> example.com +short` | resolves, or filtered as configured |
-| DNS admin | `curl -fsS http://<dns-admin-bind>:3000/ >/dev/null` | HTTP 200 |
-| VPN interface | `wg show` on the edge | interface exists; peer count matches |
-| VPN handshake | `wg show <iface> latest-handshakes` | at least one peer handshake within 5 minutes |
+| DNS admin | `curl -fsS http://<dns-admin-bind>:3000/ >/dev/null` | HTTP 200; not reachable from the public internet |
+| DNS via DHCP | on a LAN client using router-provided DNS: `dig <internal-name> +short` | expected answer; if DHCP still hands out another DNS, mark `USER-VERIFY` |
+| VPN interface | `docker exec netlattice-wg-easy wg show` | interface exists; peer count matches |
+| VPN handshake (external) | import a peer config on a phone with Wi-Fi off, connect, then `docker exec netlattice-wg-easy wg show <iface> latest-handshakes` | handshake within 5 minutes from outside the LAN |
+| VPN external reachability | from that phone, ping the VPN address and `dig @<dns-ip> <internal-name> +short` | both succeed; if no external client is available, mark `USER-VERIFY` |
 | VPN DNS | from a peer: `dig @<dns-ip> <internal-name> +short` | expected answer |
 | PVE API | `GET https://<pve>:8006/api2/json/version` | authenticated 200 |
 | PVE clone | clone a test template, start it, then delete it | clone and guest check succeed; template still exists |
@@ -281,7 +321,8 @@ The site is done only when:
 
 - All enabled modules are done.
 - Cross-module checks pass: a VPN peer resolves an internal name and reaches a compute guest, if both are enabled.
-- The user has the endpoints and knows where the secrets live.
+- External reachability is `PASS` from a real external client, or `USER-VERIFY` with the exact reason. A LAN-only handshake never counts as proof that port forwarding works.
+- The user has the endpoints, knows where the secrets live, and has a backup and rollback path.
 
 ---
 
@@ -298,6 +339,21 @@ Your expected first response is:
 3. Show the plan.
 4. Ask only for missing secrets and destructive confirmations.
 5. Apply, verify, report.
+
+---
+
+## 13. Post-deploy handoff
+
+Keep the handoff short. Give the user:
+
+- **What works**: endpoints and which networks can reach them.
+- **What is not verified**: cellular reachability, router port forwarding, DDNS, and whether router DHCP hands out the AdGuard address. Mark `USER-VERIFY` with the exact test.
+- **How to operate**: add a peer, add a DNS rewrite, clone a VM; point to the matching module section instead of pasting a second manual. If DNS is enabled, tell the user to set the router's DHCP DNS to `<dns-ip>`; do not change it yourself.
+- **Backup set**: `topology.yaml`, module `.env` files, AdGuard data, WireGuard data. Back up to an encrypted location; never to Git.
+- **Update path**: pin image/template versions; read the changelog; update one module at a time; verify after each.
+- **Rollback**: previous config path, container names, restore command, and what data is lost.
+
+Do not end with “deployment complete” alone. End with the user's next test and the exact command they can run.
 
 ---
 

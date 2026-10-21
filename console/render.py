@@ -178,7 +178,7 @@ def render_compute_plan(document: dict[str, Any]) -> dict[str, Any]:
         "defaults": config.get("defaults", {}),
         "templates": planned,
         "live": False,
-        "note": "Contract preview only. The v0.2 console does not call Proxmox.",
+        "note": "Contract preview only. The reference console does not call Proxmox.",
     }
 
 
